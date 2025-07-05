@@ -1,11 +1,19 @@
-package org.jetbrains.exposed.v1.migration
+package org.jetbrains.exposed.v1.tests.migration
 
+import org.jetbrains.exposed.v1.tests.TestDB
+import org.jetbrains.exposed.v1.tests.DatabaseTestsBase
+import org.jetbrains.exposed.v1.migration.SchemaValidationException
+import org.jetbrains.exposed.v1.migration.assertSchemaIsCorrect
+import org.jetbrains.exposed.v1.migration.validateSchema
 import org.jetbrains.exposed.v1.core.Table
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.Assertions.*
+import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.junit.Test
 
-class SchemaAssertionTest {
+import org.jetbrains.exposed.v1.tests.shared.assertTrue
+import org.jetbrains.exposed.v1.tests.shared.assertFalse
+import kotlin.test.assertFailsWith
+
+class SchemaAssertionTest : DatabaseTestsBase() {
 
     // Tabella di test semplice
     object TestTable : Table("test_table") {
@@ -24,10 +32,7 @@ class SchemaAssertionTest {
 
     @Test
     fun testAssertSchemaIsCorrectWithValidSchemaShouldNotThrowException() {
-        // Configura il database H2 in memoria per il test
-        Database.connect("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1", "org.h2.Driver", "sa", "")
-
-        transaction {
+        withDb(excludeSettings = listOf(TestDB.SQLITE)) {
             // Crea la tabella nel database
             SchemaUtils.create(TestTable)
 
@@ -38,15 +43,12 @@ class SchemaAssertionTest {
 
     @Test
     fun testAssertSchemaIsCorrectWithInvalidSchemaShouldThrowSchemaValidationException() {
-        // Configura il database H2 in memoria per il test
-        Database.connect("jdbc:h2:mem:test2;DB_CLOSE_DELAY=-1", "org.h2.Driver", "sa", "")
-
-        transaction {
+        withDb {
             // Crea la tabella nel database
             SchemaUtils.create(TestTable)
 
             // Verifica che venga lanciata l'eccezione quando la definizione della tabella non corrisponde
-            val exception = assertThrows<SchemaValidationException> {
+            val exception = assertFailsWith<SchemaValidationException> {
                 assertSchemaIsCorrect(TestTableWithExtraColumn)
             }
 
@@ -58,10 +60,7 @@ class SchemaAssertionTest {
 
     @Test
     fun testValidateSchemaWithValidSchemaShouldReturnValidResult() {
-        // Configura il database H2 in memoria per il test
-        Database.connect("jdbc:h2:mem:test3;DB_CLOSE_DELAY=-1", "org.h2.Driver", "sa", "")
-
-        transaction {
+        withDb(excludeSettings = listOf(TestDB.SQLITE)) {
             // Crea la tabella nel database
             SchemaUtils.create(TestTable)
 
@@ -74,10 +73,7 @@ class SchemaAssertionTest {
 
     @Test
     fun testValidateSchemaWithInvalidSchemaShouldReturnInvalidResult() {
-        // Configura il database H2 in memoria per il test
-        Database.connect("jdbc:h2:mem:test4;DB_CLOSE_DELAY=-1", "org.h2.Driver", "sa", "")
-
-        transaction {
+        withDb {
             // Crea la tabella nel database
             SchemaUtils.create(TestTable)
 
@@ -90,10 +86,7 @@ class SchemaAssertionTest {
 
     @Test
     fun testValidateSchemaWithMultipleTables() {
-        // Configura il database H2 in memoria per il test
-        Database.connect("jdbc:h2:mem:test5;DB_CLOSE_DELAY=-1", "org.h2.Driver", "sa", "")
-
-        transaction {
+        withDb {
             // Crea le tabelle nel database
             SchemaUtils.create(TestTable)
 
@@ -106,10 +99,7 @@ class SchemaAssertionTest {
 
     @Test
     fun testAssertSchemaIsCorrectWithInBatchParameter() {
-        // Configura il database H2 in memoria per il test
-        Database.connect("jdbc:h2:mem:test6;DB_CLOSE_DELAY=-1", "org.h2.Driver", "sa", "")
-
-        transaction {
+        withDb {
             // Crea la tabella nel database
             SchemaUtils.create(TestTable)
 
@@ -120,16 +110,13 @@ class SchemaAssertionTest {
 
     @Test
     fun testValidateSchemaWithInBatchParameter() {
-        // Configura il database H2 in memoria per il test
-        Database.connect("jdbc:h2:mem:test7;DB_CLOSE_DELAY=-1", "org.h2.Driver", "sa", "")
-
-        transaction {
+        withDb {
             // Crea la tabella nel database
             SchemaUtils.create(TestTable)
 
             // Verifica che funzioni anche con inBatch = true
-            val result = validateSchema(TestTable, inBatch = true)
-            assertTrue(result.isValid())
+            val result = validateSchema(TestTable, TestTableWithExtraColumn, inBatch = true)
+            assertFalse(result.isValid())
         }
     }
 }
