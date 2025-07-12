@@ -25,6 +25,15 @@ internal object PostgreSQLDataTypeProvider : DataTypeProvider() {
     override fun dateTimeType(): String = "TIMESTAMP"
     override fun jsonBType(): String = "JSONB"
 
+    // Supporto per i tipi geometrici di PostgreSQL
+    fun pointType(): String = "POINT"
+    fun lineType(): String = "LINE"
+    fun lsegType(): String = "LSEG"
+    fun boxType(): String = "BOX"
+    fun pathType(): String = "PATH"
+    fun polygonType(): String = "POLYGON"
+    fun circleType(): String = "CIRCLE"
+
     override fun processForDefaultValue(e: Expression<*>): String = when {
         e is LiteralOp<*> && e.columnType is JsonColumnMarker && (currentDialect as? H2Dialect) == null -> {
             val cast = if (e.columnType.usesBinaryFormat) "::jsonb" else "::json"
@@ -42,11 +51,19 @@ internal object PostgreSQLDataTypeProvider : DataTypeProvider() {
                     "$processed::$cast[]"
                 }
         }
+        // Supporto per i valori di default dei tipi geometrici
+        e is LiteralOp<*> && e.columnType is GeometricColumnType<*> -> {
+            val processed = super.processForDefaultValue(e)
+            "$processed::${e.columnType.sqlType()}"
+        }
         else -> super.processForDefaultValue(e)
     }
 
     override fun hexToDb(hexString: String): String = """E'\\x$hexString'"""
 }
+
+// Interfaccia marker per i tipi geometrici
+interface GeometricColumnType<T> : IColumnType<T>
 
 internal object PostgreSQLFunctionProvider : FunctionProvider() {
 
@@ -213,6 +230,35 @@ internal object PostgreSQLFunctionProvider : FunctionProvider() {
             }
             append(")")
         }
+    }
+
+    // Funzioni geometriche di PostgreSQL
+    fun <T> area(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("AREA(", expr, ")")
+    }
+
+    fun <T> center(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("CENTER(", expr, ")")
+    }
+
+    fun <T> diameter(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("DIAMETER(", expr, ")")
+    }
+
+    fun <T> height(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("HEIGHT(", expr, ")")
+    }
+
+    fun <T> width(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("WIDTH(", expr, ")")
+    }
+
+    fun <T> length(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("LENGTH(", expr, ")")
+    }
+
+    fun <T> radius(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("RADIUS(", expr, ")")
     }
 
     private const val ON_CONFLICT_IGNORE = "ON CONFLICT DO NOTHING"
