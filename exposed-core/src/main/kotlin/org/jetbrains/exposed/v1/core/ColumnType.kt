@@ -1419,7 +1419,7 @@ interface JsonColumnMarker {
  * Handles the conversion to/from the database string representation.
  * It implements the marker interface defined in the PostgreSQL dialect file.
  */
-abstract class PostgresGeometricType : ColumnType<String>(), vendors.GeometricColumnType<String> {
+abstract class PostgresGeometricType : ColumnType<String>(), org.jetbrains.exposed.v1.core.vendors.GeometricColumnType<String> {
     override fun valueFromDB(value: Any): String {
         // The PG JDBC driver often returns a PGobject for geometric types.
         // Its toString() method provides the standard string representation, e.g., "(x,y)".
