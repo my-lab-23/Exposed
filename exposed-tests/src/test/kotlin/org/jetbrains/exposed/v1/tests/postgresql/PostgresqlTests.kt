@@ -61,9 +61,13 @@ class PostgresqlTests : DatabaseTestsBase() {
             assertEquals(path, result[GeometricTable.pa])
             assertEquals(polygon, result[GeometricTable.po])
             assertEquals(circle, result[GeometricTable.c])
+
+            // Aggiungi questo alla fine prima che si chiuda il blocco withTables
+            println("=== TABELLA CREATA! Vai a controllare il database ===")
+            println("Premi ENTER per continuare...")
+            readLine() // Ferma l'esecuzione
         }
     }
-
 
     private val table = object : IntIdTable() {
         val name = varchar("name", 50)
