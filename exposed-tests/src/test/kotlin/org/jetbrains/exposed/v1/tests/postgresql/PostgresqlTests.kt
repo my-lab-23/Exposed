@@ -14,11 +14,56 @@ import org.jetbrains.exposed.v1.tests.shared.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.sql.ResultSet
+import org.jetbrains.exposed.v1.core.*
 import kotlin.test.assertEquals
 
 class PostgresqlTests : DatabaseTestsBase() {
     @get:Rule
     val repeatRule = RepeatableTestRule()
+
+    object GeometricTable : Table("geometric_table") {
+        val p = point("p")
+        val l = line("l")
+        val s = lseg("s")
+        val b = box("b")
+        val pa = path("pa")
+        val po = polygon("po")
+        val c = circle("c")
+    }
+
+    @Test
+    fun testPostgresqlGeometricTypes() {
+        withTables(TestDB.ALL_POSTGRES, GeometricTable) {
+            val point = "(1.0,2.0)"
+            val line = "{1.0,2.0,3.0}"
+            val segment = "((1.0,2.0),(3.0,4.0))"
+            val box = "((1.0,2.0),(3.0,4.0))"
+            val path = "((1.0,2.0),(3.0,4.0))"
+            val polygon = "((1.0,2.0),(3.0,4.0))"
+            val circle = "<(1.0,2.0),3.0>"
+
+            val insertedId = GeometricTable.insertAndGetId {
+                it[p] = point
+                it[l] = line
+                it[s] = segment
+                it[b] = box
+                it[pa] = path
+                it[po] = polygon
+                it[c] = circle
+            }
+
+            val result = GeometricTable.select { GeometricTable.id eq insertedId }.single()
+
+            assertEquals(point, result[GeometricTable.p])
+            assertEquals(line, result[GeometricTable.l])
+            assertEquals(segment, result[GeometricTable.s])
+            assertEquals(box, result[GeometricTable.b])
+            assertEquals(path, result[GeometricTable.pa])
+            assertEquals(polygon, result[GeometricTable.po])
+            assertEquals(circle, result[GeometricTable.c])
+        }
+    }
+
 
     private val table = object : IntIdTable() {
         val name = varchar("name", 50)
