@@ -26,13 +26,13 @@ internal object PostgreSQLDataTypeProvider : DataTypeProvider() {
     override fun jsonBType(): String = "JSONB"
 
     // Supporto per i tipi geometrici di PostgreSQL
-    fun pointType(): String = "POINT"
-    fun lineType(): String = "LINE"
-    fun lsegType(): String = "LSEG"
-    fun boxType(): String = "BOX"
-    fun pathType(): String = "PATH"
-    fun polygonType(): String = "POLYGON"
-    fun circleType(): String = "CIRCLE"
+    const val pointType: String = "POINT"
+    const val lineType: String = "LINE"
+    const val lsegType: String = "LSEG"
+    const val boxType: String = "BOX"
+    const val pathType: String = "PATH"
+    const val polygonType: String = "POLYGON"
+    const val circleType: String = "CIRCLE"
 
     override fun processForDefaultValue(e: Expression<*>): String = when {
         e is LiteralOp<*> && e.columnType is JsonColumnMarker && (currentDialect as? H2Dialect) == null -> {
@@ -65,6 +65,7 @@ internal object PostgreSQLDataTypeProvider : DataTypeProvider() {
 // Interfaccia marker per i tipi geometrici
 interface GeometricColumnType<T> : IColumnType<T>
 
+@Suppress("TooManyFunctions")
 internal object PostgreSQLFunctionProvider : FunctionProvider() {
 
     override fun nextVal(seq: Sequence, builder: QueryBuilder): Unit = builder {
