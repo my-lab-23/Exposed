@@ -1415,6 +1415,64 @@ interface JsonColumnMarker {
 }
 
 /**
+ * Abstract base class for PostgreSQL geometric column types.
+ * Handles the conversion to/from the database string representation.
+ * It implements the marker interface defined in the PostgreSQL dialect file.
+ */
+abstract class PostgresGeometricType : ColumnType<String>(), vendors.GeometricColumnType<String> {
+    override fun valueFromDB(value: Any): String {
+        // The PG JDBC driver often returns a PGobject for geometric types.
+        // Its toString() method provides the standard string representation, e.g., "(x,y)".
+        return value.toString()
+    }
+
+    override fun notNullValueToDB(value: String): Any {
+        // The driver can typically handle the string representation directly.
+        return value
+    }
+
+    override fun nonNullValueToString(value: String): String {
+        // Escape single quotes for use in SQL literals.
+        return "'${value.replace("'", "''")}'"
+    }
+}
+
+/** Column for storing PostgreSQL POINT type. The value is a String like `(x,y)`. */
+class PointColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "POINT"
+}
+
+/** Column for storing PostgreSQL LINE type. The value is a String like `{A,B,C}`. */
+class LineColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "LINE"
+}
+
+/** Column for storing PostgreSQL LSEG type. The value is a String like `((x1,y1),(x2,y2))` or `[(x1,y1),(x2,y2)]`. */
+class LsegColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "LSEG"
+}
+
+/** Column for storing PostgreSQL BOX type. The value is a String like `(x2,y2),(x1,y1)`. */
+class BoxColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "BOX"
+}
+
+/** Column for storing PostgreSQL PATH type. The value is a String like `((x1,y1),...,(xn,yn))` or `[(x1,y1),...,(xn,yn)]`. */
+class PathColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "PATH"
+}
+
+/** Column for storing PostgreSQL POLYGON type. The value is a String like `((x1,y1),...,(xn,yn))`. */
+class PolygonColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "POLYGON"
+}
+
+/** Column for storing PostgreSQL CIRCLE type. The value is a String like `<(x,y),r>`. */
+class CircleColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "CIRCLE"
+}
+
+/**
  * Returns the [ColumnType] commonly associated with storing values of type [T], or the [defaultType] if a mapping
  * does not exist for type [T].
  *
