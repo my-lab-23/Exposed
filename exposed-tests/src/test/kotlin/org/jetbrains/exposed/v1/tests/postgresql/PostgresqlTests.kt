@@ -21,7 +21,7 @@ class PostgresqlTests : DatabaseTestsBase() {
     @get:Rule
     val repeatRule = RepeatableTestRule()
 
-    object GeometricTable : Table("geometric_table") {
+    object GeometricTable : IntIdTable("geometric_table") {
         val p = point("p")
         val l = line("l")
         val s = lseg("s")
@@ -52,7 +52,7 @@ class PostgresqlTests : DatabaseTestsBase() {
                 it[c] = circle
             }
 
-            val result = GeometricTable.select { GeometricTable.id eq insertedId }.single()
+            val result = GeometricTable.selectAll().where { GeometricTable.id eq insertedId }.single()
 
             assertEquals(point, result[GeometricTable.p])
             assertEquals(line, result[GeometricTable.l])
@@ -65,7 +65,7 @@ class PostgresqlTests : DatabaseTestsBase() {
             // Aggiungi questo alla fine prima che si chiuda il blocco withTables
             println("=== TABELLA CREATA! Vai a controllare il database ===")
             println("Premi ENTER per continuare...")
-            readLine() // Ferma l'esecuzione
+            readln() // Ferma l'esecuzione
         }
     }
 
