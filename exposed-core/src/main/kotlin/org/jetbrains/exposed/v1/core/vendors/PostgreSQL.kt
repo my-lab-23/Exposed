@@ -6,6 +6,71 @@ import org.jetbrains.exposed.v1.core.transactions.CoreTransactionManager
 import org.jetbrains.exposed.v1.exceptions.throwUnsupportedException
 import java.util.*
 
+/**
+ * Abstract base class for PostgreSQL geometric column types.
+ * Handles the conversion to/from the database string representation.
+ * It implements the marker interface defined in the PostgreSQL dialect file.
+ */
+abstract class PostgresGeometricType : ColumnType<String>(), org.jetbrains.exposed.v1.core.vendors.GeometricColumnType<String> {
+    override fun valueFromDB(value: Any): String {
+        // The PG JDBC driver often returns a PGobject for geometric types.
+        // Its toString() method provides the standard string representation, e.g., "(x,y)".
+        return value.toString()
+    }
+
+    override fun notNullValueToDB(value: String): Any {
+        return try {
+            val pgObjectClass = Class.forName("org.postgresql.util.PGobject")
+            val pgObject = pgObjectClass.getDeclaredConstructor().newInstance()
+            pgObjectClass.getMethod("setType", String::class.java).invoke(pgObject, sqlType().lowercase())
+            pgObjectClass.getMethod("setValue", String::class.java).invoke(pgObject, value)
+            pgObject
+        } catch (e: Exception) {
+            value
+        }
+    }
+
+    override fun nonNullValueToString(value: String): String {
+        // Escape single quotes for use in SQL literals and add explicit cast.
+        return " '${value.replace("'", "''")}'::${sqlType()}"
+    }
+}
+
+/** Column for storing PostgreSQL POINT type. The value is a String like `(x,y)`. */
+class PointColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "POINT"
+}
+
+/** Column for storing PostgreSQL LINE type. The value is a String like `{A,B,C}`. */
+class LineColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "LINE"
+}
+
+/** Column for storing PostgreSQL LSEG type. The value is a String like `((x1,y1),(x2,y2))` or `[(x1,y1),(x2,y2)]`. */
+class LsegColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "LSEG"
+}
+
+/** Column for storing PostgreSQL BOX type. The value is a String like `(x2,y2),(x1,y1)`. */
+class BoxColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "BOX"
+}
+
+/** Column for storing PostgreSQL PATH type. The value is a String like `((x1,y1),...,(xn,yn))` or `[(x1,y1),...,(xn,yn)]`. */
+class PathColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "PATH"
+}
+
+/** Column for storing PostgreSQL POLYGON type. The value is a String like `((x1,y1),...,(xn,yn))`. */
+class PolygonColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "POLYGON"
+}
+
+/** Column for storing PostgreSQL CIRCLE type. The value is a String like `<(x,y),r>`. */
+class CircleColumnType : PostgresGeometricType() {
+    override fun sqlType(): String = "CIRCLE"
+}
+
 internal object PostgreSQLDataTypeProvider : DataTypeProvider() {
     override fun byteType(): String = "SMALLINT"
     override fun floatType(): String = "REAL"
@@ -25,6 +90,15 @@ internal object PostgreSQLDataTypeProvider : DataTypeProvider() {
     override fun dateTimeType(): String = "TIMESTAMP"
     override fun jsonBType(): String = "JSONB"
 
+    // Supporto per i tipi geometrici di PostgreSQL
+    const val pointType: String = "POINT"
+    const val lineType: String = "LINE"
+    const val lsegType: String = "LSEG"
+    const val boxType: String = "BOX"
+    const val pathType: String = "PATH"
+    const val polygonType: String = "POLYGON"
+    const val circleType: String = "CIRCLE"
+
     override fun processForDefaultValue(e: Expression<*>): String = when {
         e is LiteralOp<*> && e.columnType is JsonColumnMarker && (currentDialect as? H2Dialect) == null -> {
             val cast = if (e.columnType.usesBinaryFormat) "::jsonb" else "::json"
@@ -42,12 +116,21 @@ internal object PostgreSQLDataTypeProvider : DataTypeProvider() {
                     "$processed::$cast[]"
                 }
         }
+        // Supporto per i valori di default dei tipi geometrici
+        e is LiteralOp<*> && e.columnType is GeometricColumnType<*> -> {
+            val processed = super.processForDefaultValue(e)
+            "$processed::${e.columnType.sqlType()}"
+        }
         else -> super.processForDefaultValue(e)
     }
 
     override fun hexToDb(hexString: String): String = """E'\\x$hexString'"""
 }
 
+// Interfaccia marker per i tipi geometrici
+interface GeometricColumnType<T> : IColumnType<T>
+
+@Suppress("TooManyFunctions")
 internal object PostgreSQLFunctionProvider : FunctionProvider() {
 
     override fun nextVal(seq: Sequence, builder: QueryBuilder): Unit = builder {
@@ -213,6 +296,35 @@ internal object PostgreSQLFunctionProvider : FunctionProvider() {
             }
             append(")")
         }
+    }
+
+    // Funzioni geometriche di PostgreSQL
+    fun <T> area(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("AREA(", expr, ")")
+    }
+
+    fun <T> center(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("CENTER(", expr, ")")
+    }
+
+    fun <T> diameter(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("DIAMETER(", expr, ")")
+    }
+
+    fun <T> height(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("HEIGHT(", expr, ")")
+    }
+
+    fun <T> width(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("WIDTH(", expr, ")")
+    }
+
+    fun <T> length(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("LENGTH(", expr, ")")
+    }
+
+    fun <T> radius(expr: Expression<T>, queryBuilder: QueryBuilder): Unit = queryBuilder {
+        append("RADIUS(", expr, ")")
     }
 
     private const val ON_CONFLICT_IGNORE = "ON CONFLICT DO NOTHING"

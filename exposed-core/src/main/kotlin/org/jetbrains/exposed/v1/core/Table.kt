@@ -884,6 +884,29 @@ open class Table(name: String = "") : ColumnSet(), DdlAware {
     /** Creates a binary column, with the specified [name], for storing UUIDs. */
     fun uuid(name: String): Column<UUID> = registerColumn(name, UUIDColumnType())
 
+    // Geometric columns
+
+    /** Creates a geometric column, with the specified [name], for storing points. */
+    fun point(name: String): Column<String> = registerColumn(name, PointColumnType())
+
+    /** Creates a geometric column, with the specified [name], for storing lines. */
+    fun line(name: String): Column<String> = registerColumn(name, LineColumnType())
+
+    /** Creates a geometric column, with the specified [name], for storing line segments. */
+    fun lseg(name: String): Column<String> = registerColumn(name, LsegColumnType())
+
+    /** Creates a geometric column, with the specified [name], for storing boxes. */
+    fun box(name: String): Column<String> = registerColumn(name, BoxColumnType())
+
+    /** Creates a geometric column, with the specified [name], for storing paths. */
+    fun path(name: String): Column<String> = registerColumn(name, PathColumnType())
+
+    /** Creates a geometric column, with the specified [name], for storing polygons. */
+    fun polygon(name: String): Column<String> = registerColumn(name, PolygonColumnType())
+
+    /** Creates a geometric column, with the specified [name], for storing circles. */
+    fun circle(name: String): Column<String> = registerColumn(name, CircleColumnType())
+
     // Boolean columns
 
     /** Creates a column, with the specified [name], for storing boolean values. */

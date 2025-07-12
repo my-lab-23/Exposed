@@ -1414,6 +1414,8 @@ interface JsonColumnMarker {
     val usesBinaryFormat: Boolean
 }
 
+
+
 /**
  * Returns the [ColumnType] commonly associated with storing values of type [T], or the [defaultType] if a mapping
  * does not exist for type [T].
